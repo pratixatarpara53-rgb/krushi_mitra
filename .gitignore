@@ -1,0 +1,34 @@
+﻿# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# Virtual environment
+venv/
+env/
+.env
+.venv/
+
+# Flask stuff
+instance/
+.webassets-cache
+
+# Generated files
+generate_images.py
+generate_pdf.py
+*.pdf
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
