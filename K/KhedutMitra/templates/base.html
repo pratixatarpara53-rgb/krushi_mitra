@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}KhedutMitra – Smart Farming Guide{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+
+  <!-- ===== NAVBAR ===== -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="{{ url_for('index') }}" class="nav-brand">
+        <span class="brand-icon">🌾</span>
+        <span>KhedutMitra</span>
+      </a>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle menu">&#9776;</button>
+      <ul class="nav-links" id="navLinks">
+        <li><a href="{{ url_for('index') }}" class="{{ 'active' if request.endpoint == 'index' }}">Home</a></li>
+        <li><a href="{{ url_for('crops') }}" class="{{ 'active' if request.endpoint in ('crops','crop_details') }}">Crop Guide</a></li>
+        <li><a href="{{ url_for('tips') }}" class="{{ 'active' if request.endpoint == 'tips' }}">Farming Tips</a></li>
+        <li><a href="{{ url_for('calendar') }}" class="{{ 'active' if request.endpoint == 'calendar' }}">Crop Calendar</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- ===== PAGE CONTENT ===== -->
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <span class="brand-icon">🌾</span>
+        <strong>KhedutMitra</strong>
+        <p>Smart Information for Better Farming</p>
+      </div>
+      <div class="footer-links">
+        <h4>Quick Links</h4>
+        <ul>
+          <li><a href="{{ url_for('index') }}">Home</a></li>
+          <li><a href="{{ url_for('crops') }}">Crop Guide</a></li>
+          <li><a href="{{ url_for('tips') }}">Farming Tips</a></li>
+          <li><a href="{{ url_for('calendar') }}">Crop Calendar</a></li>
+        </ul>
+      </div>
+      <div class="footer-info">
+        <h4>About</h4>
+        <p>KhedutMitra provides free, educational farming information to help farmers make better decisions throughout the growing season.</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p>&copy; 2024 KhedutMitra – Smart Farming Guide &nbsp;|&nbsp; Educational Use Only</p>
+    </div>
+  </footer>
+
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
