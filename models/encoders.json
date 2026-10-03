@@ -1,0 +1,30 @@
+{
+  "crop": {
+    "Bajra": 0,
+    "Chilli": 1,
+    "Cotton": 2,
+    "Cumin": 3,
+    "Groundnut": 4,
+    "Maize": 5,
+    "Onion": 6,
+    "Wheat": 7
+  },
+  "soil": {
+    "Black Cotton": 0,
+    "Clay Loam": 1,
+    "Loam": 2,
+    "Sandy": 3,
+    "Sandy Loam": 4
+  },
+  "season": {
+    "Kharif": 0,
+    "Rabi": 1,
+    "Zaid": 2
+  },
+  "irrigation": {
+    "Drip": 0,
+    "Flood": 1,
+    "Rainfed": 2,
+    "Sprinkler": 3
+  }
+}

@@ -1,6 +1,37 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request, jsonify
+import os, json, joblib
+import numpy as np
 
 app = Flask(__name__)
+
+# ---------------------------------------------------------------------------
+# ML model – crop yield predictor
+# ---------------------------------------------------------------------------
+_model    = None
+_encoders = None
+
+def _load_model():
+    global _model, _encoders
+    model_path   = os.path.join(os.path.dirname(__file__), "models", "crop_yield_model.pkl")
+    encoder_path = os.path.join(os.path.dirname(__file__), "models", "encoders.json")
+    if os.path.exists(model_path) and os.path.exists(encoder_path):
+        _model = joblib.load(model_path)
+        with open(encoder_path) as f:
+            _encoders = json.load(f)
+
+_load_model()
+
+# Cost-per-hectare estimates (₹) for each crop (seed + fertiliser + labour)
+CROP_COST = {
+    "Cotton":    28000,
+    "Groundnut": 22000,
+    "Wheat":     18000,
+    "Bajra":     12000,
+    "Maize":     20000,
+    "Cumin":     25000,
+    "Chilli":    35000,
+    "Onion":     40000,
+}
 
 # ---------------------------------------------------------------------------
 # Static crop data – no database needed
@@ -300,6 +331,87 @@ def tips():
 @app.route("/calendar")
 def calendar():
     return render_template("calendar.html", calendar=CALENDAR)
+
+
+@app.route("/predict", methods=["GET", "POST"])
+def predict():
+    crops     = list(CROP_COST.keys())
+    soils     = ["Sandy", "Sandy Loam", "Loam", "Clay Loam", "Black Cotton"]
+    seasons   = ["Kharif", "Rabi", "Zaid"]
+    irrigations = ["Rainfed", "Flood", "Drip", "Sprinkler"]
+
+    result = None
+    error  = None
+
+    if request.method == "POST":
+        if _model is None:
+            error = "ML model not found. Please run train_model.py first."
+        else:
+            try:
+                land_ha    = float(request.form["land_ha"])
+                budget     = float(request.form["budget"])
+                soil       = request.form["soil"]
+                season     = request.form["season"]
+                irrigation = request.form["irrigation"]
+                rainfall   = float(request.form["rainfall"])
+                temperature= float(request.form["temperature"])
+                fertilizer = float(request.form["fertilizer"])
+
+                recommendations = []
+                for crop_name in crops:
+                    cost_total = CROP_COST[crop_name] * land_ha
+                    if cost_total > budget:
+                        continue  # skip crops that exceed budget
+
+                    crop_enc = _encoders["crop"].get(crop_name, 0)
+                    soil_enc = _encoders["soil"].get(soil, 0)
+                    seas_enc = _encoders["season"].get(season, 0)
+                    irr_enc  = _encoders["irrigation"].get(irrigation, 0)
+
+                    features = np.array([[crop_enc, soil_enc, seas_enc, irr_enc,
+                                          rainfall, temperature, fertilizer]])
+                    pred_yield = _model.predict(features)[0]
+                    total_yield = round(pred_yield * land_ha, 1)
+
+                    # Market price estimate (₹ per quintal)
+                    market_price = {
+                        "Cotton": 6500, "Groundnut": 5500, "Wheat": 2200,
+                        "Bajra": 2350, "Maize": 2000, "Cumin": 22000,
+                        "Chilli": 8000, "Onion": 1500,
+                    }
+                    revenue  = total_yield * market_price.get(crop_name, 3000)
+                    profit   = revenue - cost_total
+                    roi      = round((profit / cost_total) * 100, 1) if cost_total > 0 else 0
+
+                    recommendations.append({
+                        "crop":        crop_name,
+                        "gujarati":    next((c["gujarati"] for c in CROPS if c["name"] == crop_name), ""),
+                        "cost":        int(cost_total),
+                        "yield_qha":   round(pred_yield, 1),
+                        "total_yield": total_yield,
+                        "revenue":     int(revenue),
+                        "profit":      int(profit),
+                        "roi":         roi,
+                        "affordable":  cost_total <= budget,
+                    })
+
+                recommendations.sort(key=lambda x: x["profit"], reverse=True)
+                result = {
+                    "land_ha":         land_ha,
+                    "budget":          int(budget),
+                    "season":          season,
+                    "soil":            soil,
+                    "irrigation":      irrigation,
+                    "recommendations": recommendations[:5],   # top 5
+                }
+            except (ValueError, KeyError) as e:
+                error = f"Invalid input: {e}"
+
+    return render_template("predict.html",
+                           crops=crops, soils=soils,
+                           seasons=seasons, irrigations=irrigations,
+                           result=result, error=error,
+                           model_ready=(_model is not None))
 
 
 if __name__ == "__main__":

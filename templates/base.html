@@ -24,6 +24,7 @@
         <li><a href="{{ url_for('crops') }}" class="{{ 'active' if request.endpoint in ('crops','crop_details') }}">Crop Guide</a></li>
         <li><a href="{{ url_for('tips') }}" class="{{ 'active' if request.endpoint == 'tips' }}">Farming Tips</a></li>
         <li><a href="{{ url_for('calendar') }}" class="{{ 'active' if request.endpoint == 'calendar' }}">Crop Calendar</a></li>
+        <li><a href="{{ url_for('predict') }}" class="{{ 'active' if request.endpoint == 'predict' }}">🤖 Crop Predictor</a></li>
       </ul>
     </div>
   </nav>

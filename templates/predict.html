@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}Crop Predictor – KhedutMitra{% endblock %}
+
+{% block content %}
+
+<!-- ===== PAGE HERO ===== -->
+<section class="page-hero">
+  <div class="container">
+    <h1>🤖 Smart Crop Predictor</h1>
+    <p>Enter your land, budget and farm conditions — our Machine Learning model recommends the best crops and predicts expected yield &amp; profit.</p>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+
+    {% if not model_ready %}
+    <div class="alert alert-warning">
+      ⚠️ ML model is not trained yet. Run <code>python train_model.py</code> once to enable predictions.
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="alert alert-warning">⚠️ {{ error }}</div>
+    {% endif %}
+
+    <!-- ===== INPUT FORM ===== -->
+    <div class="predict-layout">
+      <div class="predict-form-card">
+        <h2>📋 Your Farm Details</h2>
+        <form method="POST" action="{{ url_for('predict') }}">
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Land Size (hectares)</label>
+              <input type="number" name="land_ha" min="0.1" max="100" step="0.1"
+                     value="{{ request.form.get('land_ha', '1') }}" required />
+            </div>
+            <div class="form-group">
+              <label>Total Budget (₹)</label>
+              <input type="number" name="budget" min="1000" step="500"
+                     value="{{ request.form.get('budget', '50000') }}" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Soil Type</label>
+              <select name="soil">
+                {% for s in soils %}
+                <option value="{{ s }}" {{ 'selected' if request.form.get('soil') == s }}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Growing Season</label>
+              <select name="season">
+                {% for s in seasons %}
+                <option value="{{ s }}" {{ 'selected' if request.form.get('season') == s }}>{{ s }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Irrigation Method</label>
+              <select name="irrigation">
+                {% for i in irrigations %}
+                <option value="{{ i }}" {{ 'selected' if request.form.get('irrigation') == i }}>{{ i }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Expected Rainfall (mm)</label>
+              <input type="number" name="rainfall" min="100" max="2000" step="10"
+                     value="{{ request.form.get('rainfall', '600') }}" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Avg. Temperature (°C)</label>
+              <input type="number" name="temperature" min="10" max="50" step="0.5"
+                     value="{{ request.form.get('temperature', '28') }}" required />
+            </div>
+            <div class="form-group">
+              <label>Fertilizer Applied (kg/ha)</label>
+              <input type="number" name="fertilizer" min="20" max="300" step="5"
+                     value="{{ request.form.get('fertilizer', '100') }}" required />
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px;"
+                  {% if not model_ready %}disabled{% endif %}>
+            🔍 Get Crop Recommendations
+          </button>
+        </form>
+      </div>
+
+      <!-- ===== HOW IT WORKS ===== -->
+      <div class="predict-info-card">
+        <h3>⚙️ How It Works</h3>
+        <ul class="how-list">
+          <li><span class="how-num">1</span> Enter your land size and available budget</li>
+          <li><span class="how-num">2</span> Select soil type, season and irrigation method</li>
+          <li><span class="how-num">3</span> Provide expected rainfall and temperature</li>
+          <li><span class="how-num">4</span> Our <strong>Random Forest ML model</strong> predicts yield for every affordable crop</li>
+          <li><span class="how-num">5</span> Results are sorted by estimated profit so you pick the best option</li>
+        </ul>
+        <div class="info-box">
+          <strong>🧠 ML Algorithm:</strong> Random Forest Regressor<br/>
+          <strong>📊 Trained on:</strong> 3,000 synthetic farm records<br/>
+          <strong>🎯 Features:</strong> Crop, Soil, Season, Irrigation, Rainfall, Temperature, Fertilizer
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== RESULTS ===== -->
+    {% if result %}
+    <div class="results-section">
+      <h2>📊 Recommendations for Your Farm</h2>
+      <p class="results-summary">
+        <strong>{{ result.land_ha }} ha</strong> land &nbsp;|&nbsp;
+        Budget: <strong>₹{{ "{:,}".format(result.budget) }}</strong> &nbsp;|&nbsp;
+        {{ result.season }} season &nbsp;|&nbsp; {{ result.soil }} soil &nbsp;|&nbsp; {{ result.irrigation }} irrigation
+      </p>
+
+      {% if result.recommendations %}
+      <div class="results-grid">
+        {% for item in result.recommendations %}
+        <div class="result-card {{ 'result-top' if loop.first }}">
+          {% if loop.first %}<div class="best-badge">🏆 Best Choice</div>{% endif %}
+          <div class="result-crop-name">
+            {{ item.crop }} <small class="crop-gujarati">{{ item.gujarati }}</small>
+          </div>
+          <div class="result-metrics">
+            <div class="metric">
+              <div class="metric-val">{{ item.yield_qha }} q/ha</div>
+              <div class="metric-label">Predicted Yield</div>
+            </div>
+            <div class="metric">
+              <div class="metric-val">{{ item.total_yield }} q</div>
+              <div class="metric-label">Total Yield</div>
+            </div>
+            <div class="metric">
+              <div class="metric-val">₹{{ "{:,}".format(item.cost) }}</div>
+              <div class="metric-label">Est. Cost</div>
+            </div>
+            <div class="metric">
+              <div class="metric-val">₹{{ "{:,}".format(item.revenue) }}</div>
+              <div class="metric-label">Est. Revenue</div>
+            </div>
+            <div class="metric {{ 'metric-profit' if item.profit > 0 else 'metric-loss' }}">
+              <div class="metric-val">₹{{ "{:,}".format(item.profit) }}</div>
+              <div class="metric-label">Est. Profit</div>
+            </div>
+            <div class="metric">
+              <div class="metric-val">{{ item.roi }}%</div>
+              <div class="metric-label">ROI</div>
+            </div>
+          </div>
+          <a href="{{ url_for('crop_details', crop_id=item.crop.lower()) }}" class="btn btn-sm" style="margin-top:10px;">View Crop Guide →</a>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="alert alert-warning">
+        No crops fit within your budget of Rs.{{ "{:,}".format(result.budget) }} for {{ result.land_ha }} ha.
+        Try increasing your budget or reducing land size.
+      </div>
+      {% endif %}
+
+      <p class="disclaimer">* Predictions are estimates based on ML model trained on synthetic data. Actual results may vary with local conditions.</p>
+    </div>
+    {% endif %}
+
+  </div>
+</section>
+
+<style>
+.page-hero { background: linear-gradient(135deg,#1a5c35,#2d8a4e); color:#fff; padding:48px 0 36px; text-align:center; }
+.page-hero h1 { font-size:2rem; margin-bottom:10px; }
+.page-hero p  { opacity:.9; max-width:600px; margin:0 auto; }
+
+.predict-layout { display:grid; grid-template-columns:1fr 340px; gap:28px; align-items:start; }
+@media(max-width:768px){ .predict-layout{ grid-template-columns:1fr; } }
+
+.predict-form-card, .predict-info-card {
+  background:#f7f8fa; border:1px solid #e5e7eb; border-radius:12px; padding:28px;
+}
+.predict-form-card h2 { margin-bottom:20px; font-size:1.2rem; color:#1f2328; }
+
+.form-row   { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+@media(max-width:500px){ .form-row{ grid-template-columns:1fr; } }
+.form-group label { display:block; font-size:.85rem; font-weight:600; color:#57606a; margin-bottom:6px; }
+.form-group input, .form-group select {
+  width:100%; padding:9px 12px; border:1px solid #d0d7de; border-radius:8px;
+  font-size:.95rem; font-family:inherit; background:#fff; box-sizing:border-box;
+}
+.form-group input:focus, .form-group select:focus {
+  outline:none; border-color:#2d8a4e; box-shadow:0 0 0 3px rgba(45,138,78,.15);
+}
+
+.predict-info-card h3 { margin-bottom:16px; color:#1f2328; }
+.how-list { list-style:none; padding:0; margin:0 0 20px; }
+.how-list li { display:flex; align-items:flex-start; gap:10px; margin-bottom:10px; font-size:.9rem; }
+.how-num { background:#2d8a4e; color:#fff; border-radius:50%; min-width:22px; height:22px;
+           display:flex; align-items:center; justify-content:center; font-size:.75rem; font-weight:700; }
+.info-box { background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:14px; font-size:.85rem; line-height:1.8; }
+
+.results-section { margin-top:40px; }
+.results-section h2 { margin-bottom:6px; }
+.results-summary { color:#57606a; margin-bottom:24px; font-size:.95rem; }
+.results-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; }
+
+.result-card {
+  background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:20px;
+  position:relative; transition:box-shadow .2s;
+}
+.result-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.08); }
+.result-top { border-color:#2d8a4e; border-width:2px; }
+.best-badge { background:#2d8a4e; color:#fff; font-size:.75rem; font-weight:700;
+              padding:3px 10px; border-radius:20px; display:inline-block; margin-bottom:10px; }
+.result-crop-name { font-size:1.15rem; font-weight:700; color:#1f2328; margin-bottom:14px; }
+.result-metrics { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+.metric { text-align:center; }
+.metric-val { font-size:1rem; font-weight:700; color:#1f2328; }
+.metric-label { font-size:.72rem; color:#57606a; margin-top:2px; }
+.metric-profit .metric-val { color:#2d8a4e; }
+.metric-loss   .metric-val { color:#c0392b; }
+
+.alert { padding:14px 18px; border-radius:8px; margin-bottom:20px; }
+.alert-warning { background:#fff8e1; border:1px solid #f0c040; color:#7a5500; }
+.disclaimer { margin-top:20px; font-size:.8rem; color:#57606a; font-style:italic; }
+</style>
+
+{% endblock %}
